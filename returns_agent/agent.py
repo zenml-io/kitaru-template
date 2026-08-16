@@ -4,11 +4,11 @@ import asyncio
 from decimal import Decimal
 from typing import Any
 
+from kitaru.task import get_task_inputs
+from kitaru_pydantic_ai import KitaruAgent
 from pydantic_ai import Agent
 from pydantic_ai.models import KnownModelName, Model
 
-from kitaru.task import get_task_inputs
-from kitaru_pydantic_ai import KitaruAgent
 from returns_agent.models import Resolution, TicketInput
 from returns_agent.store import MockCommerceStore
 

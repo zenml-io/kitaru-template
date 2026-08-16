@@ -1,20 +1,24 @@
 """Contract tests for the canonical returns-resolution example."""
 
+import json
+import re
 import tomllib
 from decimal import Decimal
 from pathlib import Path
 
+from kitaru.api_models.v1.session_node import NodeType
+from kitaru.task.importer import ImportedSession, flatten_nodes
 from kitaru_langfuse_importer.importer import parse
+
 from returns_agent.agent import (
     build_agent,
     build_prompt,
     get_ticket_input,
 )
 from returns_agent.fixtures import CASES
+from returns_agent.generate_traces import REDACTED_EXPORT_FIELDS, _sanitize_export
 from returns_agent.store import MockCommerceStore
-
-from kitaru.api_models.v1.session_node import NodeType
-from kitaru.task.importer import ImportedSession, flatten_nodes
+from scripts.run_ci_e2e import _get_server_environment
 
 EXAMPLE_DIR = Path(__file__).parents[1]
 TRACE_PATH = EXAMPLE_DIR / "traces" / "langfuse-traces.jsonl"
@@ -118,6 +122,81 @@ def test_checked_in_langfuse_export_contains_replayable_tool_traces() -> None:
         assert any(node.node_type is NodeType.TOOL_CALL for node in nodes)
 
 
+def test_checked_in_export_omits_source_instance_identifiers() -> None:
+    """Keep the public trace graph while removing private source metadata."""
+    documents = [json.loads(line) for line in TRACE_PATH.read_text().splitlines()]
+    forbidden = {
+        "gen_ai.agent.call.id",
+        "gen_ai.conversation.id",
+        "gen_ai.response.id",
+        "htmlPath",
+        "modelId",
+        "projectId",
+        "service.instance.id",
+        "usagePricingTierId",
+        "usagePricingTierName",
+    }
+    present: set[str] = set()
+    pending: list[object] = [documents]
+    while pending:
+        value = pending.pop()
+        if isinstance(value, dict):
+            present.update(value.keys() & forbidden)
+            pending.extend(value.values())
+        elif isinstance(value, list):
+            pending.extend(value)
+    assert not present, present
+
+    strings: set[str] = set()
+    pending = [documents]
+    while pending:
+        value = pending.pop()
+        if isinstance(value, dict):
+            pending.extend(value.values())
+        elif isinstance(value, list):
+            pending.extend(value)
+        elif isinstance(value, str):
+            strings.add(value)
+    fixture_emails = {ticket.email for ticket in CASES}
+    trace_emails = {
+        email for value in strings for email in re.findall(r"[\w.+-]+@[\w.-]+", value)
+    }
+    assert trace_emails <= fixture_emails
+
+
+def test_trace_generator_removes_publicly_forbidden_metadata() -> None:
+    """Keep regenerated exports inside the checked-in disclosure boundary."""
+    forbidden = {
+        "gen_ai.agent.call.id",
+        "gen_ai.conversation.id",
+        "gen_ai.response.id",
+        "htmlPath",
+        "modelId",
+        "projectId",
+        "service.instance.id",
+        "usagePricingTierId",
+        "usagePricingTierName",
+    }
+    assert forbidden <= REDACTED_EXPORT_FIELDS
+    document = {name: "private" for name in forbidden}
+    document["nested"] = [{"public_key": "credential", "safe": "value"}]
+
+    assert _sanitize_export(document) == {"nested": [{"safe": "value"}]}
+
+
+def test_e2e_server_environment_ignores_inherited_kitaru_server(monkeypatch) -> None:
+    """Never redirect the isolated E2E workflow to a caller's Kitaru server."""
+    monkeypatch.setenv("KITARU_SERVER_DATABASE_URL", "postgresql://production")
+    monkeypatch.setenv("KITARU_SERVER_DB_HOST", "production.example.test")
+    monkeypatch.setenv("KITARU_TEMPLATE_DB_PORT", "55433")
+
+    environment = _get_server_environment()
+
+    assert "KITARU_SERVER_DATABASE_URL" not in environment
+    assert environment["KITARU_SERVER_DB_HOST"] == "127.0.0.1"
+    assert environment["KITARU_SERVER_DB_PORT"] == "55433"
+
+
 def test_example_declares_its_pypi_dependencies() -> None:
     """Keep the example isolated from the repository development environment."""
     project = tomllib.loads((EXAMPLE_DIR / "pyproject.toml").read_text())
@@ -142,7 +221,8 @@ def test_example_declares_its_pypi_dependencies() -> None:
         "kitaru-pydantic-ai",
     }
     assert any(
-        requirement.startswith("kitaru[cli,mcp,worker]") for requirement in dependencies
+        requirement.startswith("kitaru[cli,mcp,server,worker]")
+        for requirement in dependencies
     )
     assert any(
         requirement.startswith("kitaru-pydantic-ai[openai]")

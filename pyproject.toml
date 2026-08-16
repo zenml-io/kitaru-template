@@ -3,7 +3,7 @@ name = "kitaru-pydantic-ai-ticket-resolver"
 version = "0.1.0"
 requires-python = ">=3.11"
 dependencies = [
-    "kitaru[cli,mcp,worker]>=0.22.0rc7,<0.23",
+    "kitaru[cli,mcp,server,worker]>=0.22.0rc7,<0.23",
     "kitaru-langfuse-importer>=0.1.0rc0,<0.2",
     "kitaru-pydantic-ai[openai]>=0.1.0rc0,<0.2",
     "langfuse>=4.14,<5",
@@ -23,3 +23,19 @@ kitaru-langgraph = false
 kitaru-langsmith-importer = false
 kitaru-openai-agents = false
 kitaru-pydantic-ai = false
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.11",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]

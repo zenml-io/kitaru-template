@@ -2,6 +2,7 @@
 
 import json
 import os
+import shlex
 import shutil
 import subprocess
 import sys
@@ -12,7 +13,7 @@ from typing import Any
 import pytest
 
 EXAMPLE_DIR = Path(__file__).parents[1]
-TRACE_PATH = EXAMPLE_DIR / "traces" / "langfuse-traces.jsonl"
+README_PATH = EXAMPLE_DIR / "README.md"
 TEST_ASSETS_DIR = EXAMPLE_DIR / "tests"
 EVALUATOR_FIXTURE_PATH = TEST_ASSETS_DIR / "canonical_returns_evaluator.py"
 CANDIDATE_AGENT_COMMAND = "python -m tests.canonical_returns_agent"
@@ -30,6 +31,19 @@ def _subprocess_environment() -> dict[str, str]:
     environment["KITARU_API_URL"] = os.environ["KITARU_CANONICAL_SERVER_URL"]
     environment["KITARU_API_KEY"] = os.environ["KITARU_CANONICAL_API_KEY"]
     return environment
+
+
+def _get_readme_command(name: str) -> list[str]:
+    """Return one marked Kitaru command from the public setup contract."""
+    readme = README_PATH.read_text()
+    marker = f"<!-- e2e:{name} -->"
+    marker_start = readme.index(marker)
+    block_start = readme.index("```bash\n", marker_start) + len("```bash\n")
+    block_end = readme.index("\n```", block_start)
+    command = readme[block_start:block_end].replace("\\\n", " ")
+    arguments = shlex.split(command)
+    assert arguments[:3] == ["uv", "run", "kitaru"]
+    return arguments[3:]
 
 
 def _run(
@@ -108,46 +122,20 @@ def test_canonical_example_completes_import_to_replay(tmp_path: Path) -> None:
     """Exercise the documented import, evaluation, cohort, and replay loop."""
     assert CLI.exists()
     _cli("status")
-    _cli(
-        "agent",
-        "register",
-        "returns-resolver",
-        "--command",
-        "python -m returns_agent.agent",
-        "--description",
-        "Resolve one synthetic returns or delivery ticket.",
-        "--display-version",
-        "baseline-v1",
-        "--working-dir",
-        ".",
-        "--timeout-seconds",
-        "180",
-        "--tool",
-        "lookup_order",
-        "--tool",
-        "get_return_policy",
-        "--tool",
-        "check_shipping",
-        "--tool",
-        "issue_refund",
-        "--tool",
-        "create_replacement",
-        "--tool",
-        "escalate_to_human",
-    )
+    _cli(*_get_readme_command("register"))
 
-    worker_name = "canonical-example-ci-worker"
-    worker_log_path = tmp_path / "worker.log"
+    worker_arguments = _get_readme_command("worker")
+    worker_name = worker_arguments[worker_arguments.index("--name") + 1]
+    worker_log_path = Path(
+        os.environ.get("KITARU_CANONICAL_WORKER_LOG", tmp_path / "worker.log")
+    )
     with worker_log_path.open("w+", encoding="utf-8") as worker_log:
         worker = subprocess.Popen(
             [
                 str(CLI),
                 "--output",
                 "jsonl",
-                "worker",
-                "start",
-                "--name",
-                worker_name,
+                *worker_arguments,
                 "--concurrency",
                 "4",
                 "--poll-interval",
@@ -167,35 +155,9 @@ def test_canonical_example_completes_import_to_replay(tmp_path: Path) -> None:
         )
         try:
             _wait_for_worker(worker_name, worker)
-            _cli(
-                "session",
-                "import",
-                str(TRACE_PATH),
-                "--importer",
-                "kitaru/langfuse@latest",
-                "--agent",
-                "returns-resolver@1",
-                "--tag",
-                "returns-baseline",
-                "--params",
-                '{"source_instance":"canonical-returns-example-ci"}',
-                "--media-type",
-                "application/x-ndjson",
-                "--wait",
-                "--timeout",
-                "180",
-            )
+            _cli(*_get_readme_command("import"), "--timeout", "180")
 
-            baseline = _items(
-                "session",
-                "list",
-                "--tag",
-                "returns-baseline",
-                "--origin",
-                "imported",
-                "--size",
-                "20",
-            )
+            baseline = _items(*_get_readme_command("list"))
             assert len(baseline) == 10
             sessions_by_ticket = {_ticket_id(item): item["id"] for item in baseline}
 

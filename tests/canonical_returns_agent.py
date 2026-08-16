@@ -5,6 +5,7 @@ from decimal import Decimal
 from importlib import import_module
 from typing import Any
 
+from kitaru.task import get_task_inputs
 from pydantic_ai.messages import (
     ModelRequest,
     ModelResponse,
@@ -13,6 +14,7 @@ from pydantic_ai.messages import (
 )
 from pydantic_ai.models import Model
 from pydantic_ai.models.function import FunctionModel
+
 from returns_agent.agent import (
     build_agent,
     build_prompt,
@@ -20,8 +22,6 @@ from returns_agent.agent import (
 )
 from returns_agent.models import TicketInput
 from returns_agent.store import MockCommerceStore
-
-from kitaru.task import get_task_inputs
 
 KitaruAgent = import_module("kitaru_pydantic_ai").KitaruAgent
 

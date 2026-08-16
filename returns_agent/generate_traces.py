@@ -15,7 +15,18 @@ from returns_agent.fixtures import CASES
 from returns_agent.store import MockCommerceStore
 
 REQUEST_OPTIONS = {"timeout_in_seconds": 30, "max_retries": 3}
-REDACTED_EXPORT_FIELDS = {"public_key"}
+REDACTED_EXPORT_FIELDS = {
+    "gen_ai.agent.call.id",
+    "gen_ai.conversation.id",
+    "gen_ai.response.id",
+    "htmlPath",
+    "modelId",
+    "projectId",
+    "public_key",
+    "service.instance.id",
+    "usagePricingTierId",
+    "usagePricingTierName",
+}
 
 
 def _require_environment() -> None:
