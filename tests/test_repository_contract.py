@@ -20,11 +20,15 @@ def test_readme_owns_setup_without_copying_the_tutorial() -> None:
     readme = (ROOT / "README.md").read_text()
     assert "git clone https://github.com/zenml-io/kitaru-template.git" in readme
     assert "traces/langfuse-traces.jsonl" in readme
-    assert "kitaru-investigation" in readme
+    assert "kitaru-guided-tour" in readme
     assert "change returns_agent/agent.py" in readme
     assert "Experiment candidates come from changes" in readme
     assert "docs/book/tutorials/returns-agent" in readme
     assert "examples/pydantic_ai_ticket_resolver" not in readme
+    assert "If the selected server is healthy, keep using it" in readme
+    assert "If no usable server is selected" in readme
+    assert readme.index("kitaru status") < readme.index("kitaru login --local")
+    assert "paid model calls" not in readme
     assert readme.index("kitaru worker start") < readme.index("kitaru session import")
     assert len(readme.splitlines()) < 180
 
