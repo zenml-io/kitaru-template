@@ -1,6 +1,6 @@
 # Investigate a PydanticAI agent with Kitaru
 
-This repository is a ready-to-run Kitaru investigation template. It contains a PydanticAI returns agent, ten checked-in Langfuse traces, and deterministic tests. All customers, orders, shipments, and actions are synthetic. Refund and replacement tools modify only an in-memory store.
+This repository is a ready-to-run Kitaru investigation template. It contains a PydanticAI returns agent, ten checked-in Langfuse traces with model-generated reasoning summaries, and deterministic tests. All customers, orders, shipments, and actions are synthetic. Refund and replacement tools modify only an in-memory store.
 
 Use this README to prepare the template and import its starting evidence. Continue with the [complete returns-agent tutorial](https://github.com/zenml-io/kitaru/tree/develop/docs/book/tutorials/returns-agent) for the investigation, evaluator, replay, and comparison method.
 

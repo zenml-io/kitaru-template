@@ -83,6 +83,7 @@ def test_baseline_agent_exposes_the_mock_commerce_tools() -> None:
     """Keep the example trace graph focused on investigation and terminal actions."""
     agent = build_agent(MockCommerceStore(), "test")
 
+    assert agent.model_settings == {"openai_reasoning_summary": "auto"}
     assert set(agent._function_toolset.tools) == {
         "lookup_order",
         "get_return_policy",
@@ -118,7 +119,9 @@ def test_checked_in_langfuse_export_contains_replayable_tool_traces() -> None:
     }
     for session in sessions:
         nodes = flatten_nodes(session.nodes)
-        assert any(node.node_type is NodeType.LLM_CALL for node in nodes)
+        llm_nodes = [node for node in nodes if node.node_type is NodeType.LLM_CALL]
+        assert llm_nodes
+        assert any(node.reasoning for node in llm_nodes)
         assert any(node.node_type is NodeType.TOOL_CALL for node in nodes)
 
 
@@ -159,7 +162,9 @@ def test_checked_in_export_omits_source_instance_identifiers() -> None:
             strings.add(value)
     fixture_emails = {ticket.email for ticket in CASES}
     trace_emails = {
-        email for value in strings for email in re.findall(r"[\w.+-]+@[\w.-]+", value)
+        email
+        for value in strings
+        for email in re.findall(r"[\w.+-]+@[\w.-]+\.\w+", value)
     }
     assert trace_emails <= fixture_emails
 
