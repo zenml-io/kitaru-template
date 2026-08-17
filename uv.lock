@@ -872,14 +872,14 @@ worker = [
 
 [[package]]
 name = "kitaru-langfuse-importer"
-version = "0.1.0rc0"
+version = "0.1.0rc3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "kitaru" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a0/99/dfdacbb2637152c9cc98a9419ad2a48bc7a8217c5914e81db450a4cab2d3/kitaru_langfuse_importer-0.1.0rc0.tar.gz", hash = "sha256:677d1061615c50e8dc5088cf56132be4dad70b76744bc486ec9a4d7726b2c7b5", size = 13288, upload-time = "2026-08-13T12:29:29.452Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/69/dd/0de36b2974f4ff329cfc716a3c73d111294d92adf16a5969092256c60bf6/kitaru_langfuse_importer-0.1.0rc3.tar.gz", hash = "sha256:1c7319e12bf7e3694681fbfc6f7dc10d823ca6e1595b0dc1ca35f9e0a693e8a6", size = 14991, upload-time = "2026-08-17T16:39:07.284Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e0/35/d6537855b08b7e075e1481a250744794edc671d74fd324940e760c8d32a0/kitaru_langfuse_importer-0.1.0rc0-py3-none-any.whl", hash = "sha256:2c8b274ab3c7c6b1bab66623a089a6e078a7c42219c925db9a90873ad79364c2", size = 11433, upload-time = "2026-08-13T12:29:28.402Z" },
+    { url = "https://files.pythonhosted.org/packages/b5/c1/095b79731449ff52cca20cac9495b3e7f4c8edc0fc9095be39f64559ad47/kitaru_langfuse_importer-0.1.0rc3-py3-none-any.whl", hash = "sha256:62be59691601e677ad058455bd37307e58d0b3578cbbd327a82002ebbd10ee87", size = 12921, upload-time = "2026-08-17T16:39:06.2Z" },
 ]
 
 [[package]]
