@@ -8,7 +8,7 @@ Use this README to prepare the template and import its starting evidence. Contin
 
 - [Git](https://git-scm.com/)
 - [uv](https://docs.astral.sh/uv/)
-- Docker, for the local Kitaru workspace
+- Docker, only if you use the optional local Kitaru server
 - Node.js and `npx`, for installing the optional coding-agent skills
 
 No model-provider or Langfuse credentials are needed for the checked-in import.
@@ -23,7 +23,13 @@ cd kitaru-template
 uv sync --frozen
 ```
 
-Start and select an isolated local Kitaru workspace:
+Check the currently selected Kitaru server:
+
+```bash
+uv run kitaru status
+```
+
+If the selected server is healthy, keep using it. It can be local or cloud. If no usable server is selected and you want an isolated local server for the template, start and select one with Docker:
 
 ```bash
 uv run kitaru login --local
@@ -97,13 +103,13 @@ npx skills add zenml-io/kitaru-skills
 Then give your coding agent this prompt:
 
 ```text
-Use the kitaru-investigation skill to investigate the included PydanticAI
+Use the kitaru-guided-tour skill to investigate the included PydanticAI
 returns agent. The registered agent is returns-resolver and its imported
 sessions have the returns-baseline tag. Use the checked-in Langfuse evidence,
-show me the recorded behavior before asking for a judgment, and do not generate
-new traces or make paid model calls. When the investigation identifies a fix,
-change returns_agent/agent.py, register that command as a new agent version, and
-run the experiment against the changed version.
+show me the recorded behavior before asking for a judgment, and explain what
+each step does and why it matters. When the investigation identifies a fix,
+change returns_agent/agent.py, register that command as a new agent version,
+and run the experiment against the changed version.
 ```
 
 The skill stores investigation state in Kitaru and can resume from existing agents, import jobs, tags, and sessions. The [complete tutorial](https://github.com/zenml-io/kitaru/tree/develop/docs/book/tutorials/returns-agent) explains the five-step method and the commands behind it.
@@ -131,4 +137,4 @@ uv run python scripts/run_ci_e2e.py
 
 The runner starts and stops its own Kitaru server. The end-to-end test starts and stops its worker and prints the captured logs when either process fails.
 
-When you finish investigating, press `Ctrl-C` in the worker terminal and disconnect from the local workspace with `uv run kitaru logout`.
+When you finish investigating, press `Ctrl-C` in the worker terminal. If you selected the temporary local server for this template, disconnect from it with `uv run kitaru logout`.
