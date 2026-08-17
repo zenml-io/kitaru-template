@@ -81,6 +81,15 @@ def _get_trace(client: Any, trace_id: str) -> Any:
         time.sleep(2)
 
 
+def _get_trace_id(result: Any) -> str:
+    """Extract the Langfuse trace ID retained by an instrumented agent run."""
+    traceparent = result._traceparent()  # noqa: SLF001
+    parts = traceparent.split("-")
+    if len(parts) != 4 or len(parts[1]) != 32:
+        raise RuntimeError("PydanticAI returned an invalid trace context.")
+    return parts[1]
+
+
 async def generate_traces(export_path: Path) -> Path:
     """Run ten baseline tickets and write their Langfuse traces as JSONL."""
     _require_environment()
@@ -88,53 +97,41 @@ async def generate_traces(export_path: Path) -> Path:
 
     langfuse = Langfuse()
     Agent.instrument_all()
-    trace_ids: dict[str, str] = {}
+    trace_data: dict[str, tuple[str, dict[str, Any], dict[str, Any]]] = {}
 
     for ticket in CASES:
         trace_input = ticket.model_dump(mode="json")
         session_id = f"returns-{ticket.ticket_id}"
-        with (
-            propagate_attributes(
-                session_id=session_id,
-                trace_name=f"Returns ticket: {ticket.ticket_id}",
-                environment="canonical-example",
-                version="baseline-v1",
-                tags=["returns-resolution", "kitaru-example"],
-                metadata={
-                    "ticket_id": ticket.ticket_id,
-                    "agent_release": "baseline-v1",
-                },
-            ),
-            langfuse.start_as_current_observation(
-                name="resolve-ticket",
-                as_type="agent",
-                input=trace_input,
-            ) as root,
+        with propagate_attributes(
+            session_id=session_id,
+            trace_name=f"Returns ticket: {ticket.ticket_id}",
+            environment="canonical-example",
+            version="baseline-v1",
+            tags=["returns-resolution", "kitaru-example"],
+            metadata={
+                "ticket_id": ticket.ticket_id,
+                "agent_release": "baseline-v1",
+            },
         ):
             result = await build_agent(MockCommerceStore(), MODEL).run(
                 build_prompt(ticket)
             )
             output = result.output.model_dump(mode="json")
-            root.update(output=output)
-            root.set_trace_io(input=trace_input, output=output)
-            trace_id = langfuse.get_current_trace_id()
-            if trace_id is None:
-                raise RuntimeError("Langfuse did not create a trace ID.")
-            trace_ids[session_id] = trace_id
+            trace_data[session_id] = (_get_trace_id(result), trace_input, output)
         langfuse.flush()
 
     langfuse.flush()
     traces = []
-    for session_id in sorted(trace_ids):
-        trace = await asyncio.to_thread(_get_trace, langfuse, trace_ids[session_id])
-        traces.append(trace)
+    for session_id in sorted(trace_data):
+        trace_id, trace_input, output = trace_data[session_id]
+        trace = await asyncio.to_thread(_get_trace, langfuse, trace_id)
+        document = trace.model_dump(mode="json", by_alias=True)
+        document["input"] = trace_input
+        document["output"] = output
+        traces.append(document)
     export_path.parent.mkdir(parents=True, exist_ok=True)
     export_path.write_text(
-        "\n".join(
-            json.dumps(_sanitize_export(trace.model_dump(mode="json", by_alias=True)))
-            for trace in traces
-        )
-        + "\n",
+        "\n".join(json.dumps(_sanitize_export(trace)) for trace in traces) + "\n",
         encoding="utf-8",
     )
     return export_path
