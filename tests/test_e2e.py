@@ -177,6 +177,7 @@ def test_canonical_example_completes_import_to_cohorts(tmp_path: Path) -> None:
             )
 
             reviewed_tickets = {
+                "ticket-003": ("problematic", "escalate"),
                 "ticket-004": ("problematic", "escalate"),
                 "ticket-007": ("problematic", "escalate"),
                 "ticket-001": ("acceptable", "refund"),
@@ -235,7 +236,7 @@ def test_canonical_example_completes_import_to_cohorts(tmp_path: Path) -> None:
                 "--size",
                 "20",
             )
-            assert len(linked_sessions) == 5
+            assert len(linked_sessions) == 6
             links_by_session = {
                 item["session_id"]: item["id"] for item in linked_sessions
             }
@@ -281,7 +282,7 @@ def test_canonical_example_completes_import_to_cohorts(tmp_path: Path) -> None:
                 "item"
             ]
             assert completed_investigation["status"] == "completed"
-            assert completed_investigation["completed_sessions"] == 5
+            assert completed_investigation["completed_sessions"] == 6
             annotation_filter = json.dumps(
                 {
                     "field": "investigation_id",
@@ -298,9 +299,9 @@ def test_canonical_example_completes_import_to_cohorts(tmp_path: Path) -> None:
                 "--size",
                 "100",
             )
-            assert len(annotations) == 10
-            assert sum(item["selector"] is not None for item in annotations) == 5
-            assert sum(isinstance(item["value"], str) for item in annotations) == 5
+            assert len(annotations) == 12
+            assert sum(item["selector"] is not None for item in annotations) == 6
+            assert sum(isinstance(item["value"], str) for item in annotations) == 6
             assert all(
                 not (isinstance(item["value"], dict) and "judgment" in item["value"])
                 for item in annotations
@@ -344,7 +345,7 @@ def test_canonical_example_completes_import_to_cohorts(tmp_path: Path) -> None:
                 "evaluation", "list", "--filter", policy_filter, "--size", "100"
             )
             assert len(baseline_policy) == 10
-            assert sum(item["passed"] is False for item in baseline_policy) == 2
+            assert sum(item["passed"] is False for item in baseline_policy) == 3
 
             _cli(
                 "cohort",
@@ -352,6 +353,8 @@ def test_canonical_example_completes_import_to_cohorts(tmp_path: Path) -> None:
                 "unsafe-refund-baseline",
                 "--agent",
                 "returns-resolver",
+                "--session",
+                sessions_by_ticket["ticket-003"],
                 "--session",
                 sessions_by_ticket["ticket-004"],
                 "--session",
