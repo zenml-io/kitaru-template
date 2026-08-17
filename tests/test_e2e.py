@@ -16,7 +16,6 @@ EXAMPLE_DIR = Path(__file__).parents[1]
 README_PATH = EXAMPLE_DIR / "README.md"
 TEST_ASSETS_DIR = EXAMPLE_DIR / "tests"
 EVALUATOR_FIXTURE_PATH = TEST_ASSETS_DIR / "canonical_returns_evaluator.py"
-CANDIDATE_AGENT_COMMAND = "python -m tests.canonical_returns_agent"
 CLI = Path(sys.executable).with_name("kitaru")
 
 pytestmark = pytest.mark.skipif(
@@ -118,8 +117,8 @@ def _wait_for_worker(name: str, process: subprocess.Popen[str]) -> None:
     raise RuntimeError("Worker did not become live within 30 seconds.")
 
 
-def test_canonical_example_completes_import_to_replay(tmp_path: Path) -> None:
-    """Exercise the documented import, evaluation, cohort, and replay loop."""
+def test_canonical_example_completes_import_to_cohorts(tmp_path: Path) -> None:
+    """Exercise the provider-free import, evaluation, and cohort workflow."""
     assert CLI.exists()
     _cli("status")
     _cli(*_get_readme_command("register"))
@@ -178,6 +177,7 @@ def test_canonical_example_completes_import_to_replay(tmp_path: Path) -> None:
             )
 
             reviewed_tickets = {
+                "ticket-003": ("problematic", "escalate"),
                 "ticket-004": ("problematic", "escalate"),
                 "ticket-007": ("problematic", "escalate"),
                 "ticket-001": ("acceptable", "refund"),
@@ -236,7 +236,7 @@ def test_canonical_example_completes_import_to_replay(tmp_path: Path) -> None:
                 "--size",
                 "20",
             )
-            assert len(linked_sessions) == 5
+            assert len(linked_sessions) == 6
             links_by_session = {
                 item["session_id"]: item["id"] for item in linked_sessions
             }
@@ -282,7 +282,7 @@ def test_canonical_example_completes_import_to_replay(tmp_path: Path) -> None:
                 "item"
             ]
             assert completed_investigation["status"] == "completed"
-            assert completed_investigation["completed_sessions"] == 5
+            assert completed_investigation["completed_sessions"] == 6
             annotation_filter = json.dumps(
                 {
                     "field": "investigation_id",
@@ -299,9 +299,9 @@ def test_canonical_example_completes_import_to_replay(tmp_path: Path) -> None:
                 "--size",
                 "100",
             )
-            assert len(annotations) == 10
-            assert sum(item["selector"] is not None for item in annotations) == 5
-            assert sum(isinstance(item["value"], str) for item in annotations) == 5
+            assert len(annotations) == 12
+            assert sum(item["selector"] is not None for item in annotations) == 6
+            assert sum(isinstance(item["value"], str) for item in annotations) == 6
             assert all(
                 not (isinstance(item["value"], dict) and "judgment" in item["value"])
                 for item in annotations
@@ -345,7 +345,7 @@ def test_canonical_example_completes_import_to_replay(tmp_path: Path) -> None:
                 "evaluation", "list", "--filter", policy_filter, "--size", "100"
             )
             assert len(baseline_policy) == 10
-            assert sum(item["passed"] is False for item in baseline_policy) == 2
+            assert sum(item["passed"] is False for item in baseline_policy) == 3
 
             _cli(
                 "cohort",
@@ -353,6 +353,8 @@ def test_canonical_example_completes_import_to_replay(tmp_path: Path) -> None:
                 "unsafe-refund-baseline",
                 "--agent",
                 "returns-resolver",
+                "--session",
+                sessions_by_ticket["ticket-003"],
                 "--session",
                 sessions_by_ticket["ticket-004"],
                 "--session",
@@ -371,102 +373,6 @@ def test_canonical_example_completes_import_to_replay(tmp_path: Path) -> None:
                 "--session",
                 sessions_by_ticket["ticket-010"],
             )
-
-            _cli(
-                "agent",
-                "version",
-                "register",
-                "returns-resolver",
-                "--command",
-                CANDIDATE_AGENT_COMMAND,
-                "--description",
-                "Check approval and risk rules before issuing a refund.",
-                "--display-version",
-                "strict-policy-v2",
-                "--working-dir",
-                ".",
-                "--timeout-seconds",
-                "180",
-                "--tool",
-                "lookup_order",
-                "--tool",
-                "get_return_policy",
-                "--tool",
-                "check_shipping",
-                "--tool",
-                "issue_refund",
-                "--tool",
-                "create_replacement",
-                "--tool",
-                "escalate_to_human",
-            )
-            _cli(
-                "experiment",
-                "create",
-                "improve-returns-policy",
-                "--agent",
-                "returns-resolver",
-                "--tool-policy",
-                '{"default":{"type":"passthrough"},"tools":{}}',
-                "--evaluator",
-                "returns-policy@1",
-                "--evaluator",
-                "kitaru/cost@latest",
-                "--evaluator",
-                "kitaru/latency@latest",
-                "--evaluator",
-                "kitaru/tool-call-patterns@latest",
-            )
-
-            target_version = _cli(
-                "cohort", "version", "get", "unsafe-refund-baseline@1"
-            )["item"]["id"]
-            control_version = _cli("cohort", "version", "get", "safe-refund-control@1")[
-                "item"
-            ]["id"]
-            for cohort_version in (target_version, control_version):
-                _cli(
-                    "experiment",
-                    "run",
-                    "start",
-                    "improve-returns-policy",
-                    "--cohort-version",
-                    cohort_version,
-                    "--agent",
-                    "returns-resolver@2",
-                    "--evaluate-baselines",
-                    "--wait",
-                    "--timeout",
-                    "300",
-                    timeout=360,
-                )
-
-            runs = _items("experiment", "run", "list", "--size", "20")
-            assert len(runs) == 2
-            assert {item["status"] for item in runs} == {"completed"}
-            assert sum(item["progress"]["completed"] for item in runs) == 5
-
-            replayed = _items(
-                "session",
-                "list",
-                "--agent",
-                "returns-resolver",
-                "--origin",
-                "replay",
-                "--size",
-                "20",
-            )
-            assert len(replayed) == 5
-            assert {item["status"] for item in replayed} == {"completed"}
-            replay_ids = {item["id"] for item in replayed}
-            all_policy = _items(
-                "evaluation", "list", "--filter", policy_filter, "--size", "100"
-            )
-            replay_policy = [
-                item for item in all_policy if item["session_id"] in replay_ids
-            ]
-            assert len(replay_policy) == 5
-            assert all(item["passed"] is True for item in replay_policy)
         finally:
             worker.terminate()
             try:

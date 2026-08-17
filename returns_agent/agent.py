@@ -75,6 +75,7 @@ def build_agent(
         output_type=Resolution,
         instructions=get_instructions(),
         retries=2,
+        model_settings={"openai_reasoning_summary": "auto"},
     )
 
     @agent.tool_plain
