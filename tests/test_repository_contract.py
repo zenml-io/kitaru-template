@@ -11,6 +11,7 @@ def test_public_template_contract_is_root_local() -> None:
     assert (ROOT / "returns_agent").is_dir()
     assert (ROOT / "traces" / "langfuse-traces.jsonl").is_file()
     assert (ROOT / "scripts" / "run_ci_e2e.py").is_file()
+    assert not (ROOT / "tests" / "canonical_returns_agent.py").exists()
     assert not (ROOT / "examples").exists()
 
 
@@ -20,6 +21,8 @@ def test_readme_owns_setup_without_copying_the_tutorial() -> None:
     assert "git clone https://github.com/zenml-io/kitaru-template.git" in readme
     assert "traces/langfuse-traces.jsonl" in readme
     assert "kitaru-investigation" in readme
+    assert "change returns_agent/agent.py" in readme
+    assert "Experiment candidates come from changes" in readme
     assert "docs/book/tutorials/returns-agent" in readme
     assert "examples/pydantic_ai_ticket_resolver" not in readme
     assert readme.index("kitaru worker start") < readme.index("kitaru session import")
