@@ -16,7 +16,11 @@ from returns_agent.agent import (
     get_ticket_input,
 )
 from returns_agent.fixtures import CASES
-from returns_agent.generate_traces import REDACTED_EXPORT_FIELDS, _sanitize_export
+from returns_agent.generate_traces import (
+    REDACTED_EXPORT_FIELDS,
+    _get_trace_id,
+    _sanitize_export,
+)
 from returns_agent.store import MockCommerceStore
 from scripts.run_ci_e2e import _get_server_environment
 
@@ -118,8 +122,20 @@ def test_checked_in_langfuse_export_contains_replayable_tool_traces() -> None:
     }
     for session in sessions:
         nodes = flatten_nodes(session.nodes)
+        assert [node.name for node in session.nodes] == ["agent run"]
+        assert all(node.name != "resolve-ticket" for node in nodes)
         assert any(node.node_type is NodeType.LLM_CALL for node in nodes)
         assert any(node.node_type is NodeType.TOOL_CALL for node in nodes)
+
+
+def test_trace_generator_extracts_the_instrumented_run_trace_id() -> None:
+    """Fetch the trace emitted by PydanticAI without adding a wrapper span."""
+
+    class Result:
+        def _traceparent(self) -> str:
+            return "00-0123456789abcdef0123456789abcdef-fedcba9876543210-01"
+
+    assert _get_trace_id(Result()) == "0123456789abcdef0123456789abcdef"
 
 
 def test_checked_in_export_omits_source_instance_identifiers() -> None:
