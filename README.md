@@ -4,6 +4,14 @@ This repository is a ready-to-run Kitaru investigation template. It contains a P
 
 Use this README to prepare the template and import its starting evidence. Continue with the [complete returns-agent tutorial](https://github.com/zenml-io/kitaru/tree/develop/docs/book/tutorials/returns-agent) for the investigation, evaluator, replay, and comparison method.
 
+## Watch the guided tour
+
+Want to see the complete Kitaru loop without setting anything up first? [Watch the 26-minute guided tour](https://youtu.be/aYLfzXEr2Rk). Alex starts with the Kitaru Quickstart, then uses the `kitaru-guided-tour` skill on this template to review recorded sessions, define an evaluator and cohort, replay one improvement, and compare the result.
+
+<p align="center">
+  <a href="https://youtu.be/aYLfzXEr2Rk"><img src="assets/kitaru-guided-tour.webp" alt="Watch the Kitaru guided tour on YouTube"></a>
+</p>
+
 ## Requirements
 
 - [Git](https://git-scm.com/)
