@@ -39,4 +39,4 @@ uv run python scripts/run_ci_e2e.py   # full end-to-end (needs PostgreSQL on 127
 - `returns_agent/fixtures.py` — `ORDERS`, `POLICIES`, `SHIPMENTS`, and the ten `CASES` ticket inputs. Tickets carry no outcome labels; expected outcomes live only in `tests/canonical_returns_evaluator.py`.
 - The e2e test covers the provider-free portion of the documented product loop: register agent → start worker → import traces → evaluate → create an investigation with annotations and verdicts → register a custom evaluator → build cohorts. Experiments are run only after a user or coding agent changes `returns_agent/agent.py` and registers that implementation as a new version.
 
-Dependencies pin Kitaru release-candidate packages (`>=0.22.0rc7,<0.23` etc.); `uv.lock` is committed and CI installs with `--frozen`, so dependency changes require regenerating the lockfile.
+The core dependency requires stable Kitaru 0.22 (`>=0.22.0,<0.23`). Adapter and importer distributions may use their own release-candidate versions. `uv.lock` is committed and CI installs with `--frozen`, so dependency changes require regenerating the lockfile.
