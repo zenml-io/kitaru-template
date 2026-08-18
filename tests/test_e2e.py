@@ -135,8 +135,6 @@ def test_canonical_example_completes_import_to_cohorts(tmp_path: Path) -> None:
                 "--output",
                 "jsonl",
                 *worker_arguments,
-                "--concurrency",
-                "4",
                 "--poll-interval",
                 "0.1",
                 "--blob-cache-root",

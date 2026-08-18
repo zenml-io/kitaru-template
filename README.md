@@ -29,7 +29,20 @@ Check the currently selected Kitaru server:
 uv run kitaru status
 ```
 
-If the selected server is healthy, keep using it. It can be local or cloud. If no usable server is selected and you want an isolated local server for the template, start and select one with Docker:
+If the selected server is healthy, keep using it. It can be local or cloud. Check whether this template is already set up there:
+
+```bash
+uv run kitaru agent get returns-resolver
+uv run kitaru session list \
+  --agent returns-resolver \
+  --tag returns-baseline \
+  --origin imported \
+  --size 20
+```
+
+If the agent and its ten imported sessions already exist, skip to [Continue with a coding agent](#continue-with-a-coding-agent). The guided tour will inspect and resume that state before it creates anything. If neither exists, continue with the registration below. If only part of the setup exists, or `returns-resolver` belongs to another project, select a different server so the fixed template names do not collide.
+
+If no usable server is selected and you want an isolated local server for the template, start and select one with Docker:
 
 ```bash
 uv run kitaru login --local
@@ -61,7 +74,7 @@ Open a second terminal in this directory and start a worker. No model-provider c
 <!-- e2e:worker -->
 
 ```bash
-uv run kitaru worker start --name kitaru-template-worker
+uv run kitaru worker start --name kitaru-template-worker --concurrency 10
 ```
 
 Leave the worker running while you import and investigate. Return to the first terminal for the remaining commands.
@@ -103,20 +116,29 @@ npx skills add zenml-io/kitaru-skills
 Then give your coding agent this prompt:
 
 ```text
-Use the kitaru-guided-tour skill to investigate the included PydanticAI
-returns agent. The registered agent is returns-resolver and its imported
-sessions have the returns-baseline tag. Use the checked-in Langfuse evidence,
-show me the recorded behavior before asking for a judgment, and explain what
-each step does and why it matters. When the investigation identifies a fix,
-change returns_agent/agent.py, register that command as a new agent version,
-and run the experiment against the changed version.
+Use the kitaru-guided-tour skill with the registered returns-resolver agent
+and the sessions tagged returns-baseline. Walk me through the prepared review
+and show me the relevant trace evidence before asking for each judgment. Once
+we agree on a behavior to improve, help me turn it into an evaluator and test
+one small change. Show me the full run plan and ask before changing code or
+starting paid model work.
 ```
 
 The skill stores investigation state in Kitaru and can resume from existing agents, import jobs, tags, and sessions. The [complete tutorial](https://github.com/zenml-io/kitaru/tree/develop/docs/book/tutorials/returns-agent) explains the five-step method and the commands behind it.
 
-Experiment candidates come from changes to `returns_agent/agent.py`. Register
-that implementation as a new agent version so each experiment measures the
-code under investigation.
+### Already familiar with Kitaru?
+
+If you have read the [Kitaru quickstart](https://docs.zenml.io/kitaru/getting-started/quickstart) and understand how Kitaru moves from recorded evidence to an evaluator and replay, you can use the less scripted investigation skill instead:
+
+```text
+Use kitaru-investigation with the registered returns-resolver agent and the
+sessions tagged returns-baseline. Start from the recorded evidence and help
+me decide what is worth investigating. Once I accept a finding, help me turn
+it into an evaluator and test one bounded change. Ask before creating
+resources, changing code, or starting paid replay.
+```
+
+If the investigation points to agent behavior, change `returns_agent/agent.py` and register the new implementation as another agent version before running the experiment.
 
 ## Validate the repository
 
@@ -138,3 +160,5 @@ uv run python scripts/run_ci_e2e.py
 The runner starts and stops its own Kitaru server. The end-to-end test starts and stops its worker and prints the captured logs when either process fails.
 
 When you finish investigating, press `Ctrl-C` in the worker terminal. If you selected the temporary local server for this template, disconnect from it with `uv run kitaru logout`.
+
+When you are ready to investigate your own agent, open its project and start with `kitaru-investigation`.
