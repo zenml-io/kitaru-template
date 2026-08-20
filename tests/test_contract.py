@@ -1,19 +1,26 @@
 """Contract tests for the canonical returns-resolution example."""
 
+import asyncio
 import json
 import re
 import tomllib
 from decimal import Decimal
 from pathlib import Path
+from types import SimpleNamespace
 
+import pytest
 from kitaru.api_models.v1.session_node import NodeType
 from kitaru.task.importer import ImportedSession, flatten_nodes
 from kitaru_langfuse_importer.importer import parse
 
 from returns_agent.agent import (
+    MODEL,
     build_agent,
     build_prompt,
+    get_runtime_inputs,
+    get_runtime_model,
     get_ticket_input,
+    main,
 )
 from returns_agent.fixtures import CASES
 from returns_agent.generate_traces import (
@@ -81,6 +88,114 @@ def test_agent_input_is_replay_safe() -> None:
     assert get_ticket_input(imported) == ticket
     prompt = build_prompt(ticket)
     assert ticket.body in prompt
+
+
+def test_external_evaluator_inputs_do_not_require_a_kitaru_task_id(
+    monkeypatch,
+) -> None:
+    """Read inputs injected by Verifiers without contacting Kitaru."""
+    ticket = CASES[0]
+    monkeypatch.delenv("KITARU_TASK_ID", raising=False)
+    monkeypatch.setenv("KITARU_TASK_INPUTS", ticket.model_dump_json())
+    monkeypatch.setattr(
+        "returns_agent.agent.get_kitaru_task_inputs",
+        lambda: pytest.fail("Kitaru task lookup should not run"),
+    )
+
+    assert get_runtime_inputs() == ticket.model_dump(mode="json")
+
+
+def test_runtime_inputs_fall_back_to_the_kitaru_worker(monkeypatch) -> None:
+    """Preserve the registered-worker input lookup outside an evaluator."""
+    ticket = CASES[0].model_dump(mode="json")
+    monkeypatch.delenv("KITARU_TASK_INPUTS", raising=False)
+    monkeypatch.setattr(
+        "returns_agent.agent.get_kitaru_task_inputs",
+        lambda: ticket,
+    )
+
+    assert get_runtime_inputs() == ticket
+
+
+def test_external_evaluator_can_select_the_model(monkeypatch) -> None:
+    """Keep the example default unless an evaluator supplies a model."""
+    monkeypatch.delenv("OPENAI_MODEL", raising=False)
+    assert get_runtime_model() == MODEL
+
+    monkeypatch.setenv("OPENAI_MODEL", "openai:gpt-5-mini")
+    assert get_runtime_model() == "openai:gpt-5-mini"
+
+
+def test_external_evaluation_runs_the_underlying_agent(monkeypatch, capsys) -> None:
+    """Avoid nested Kitaru recording when Verifiers runs the command."""
+    ticket = CASES[0]
+    calls: list[tuple[str, str]] = []
+
+    class RawAgent:
+        async def run(self, prompt: str) -> SimpleNamespace:
+            calls.append(("raw", prompt))
+            return SimpleNamespace(
+                output=SimpleNamespace(model_dump_json=lambda: '{"action":"refund"}')
+            )
+
+    def build_raw_agent(store, model):
+        assert isinstance(store, MockCommerceStore)
+        calls.append(("model", model))
+        return RawAgent()
+
+    def reject_wrapper(*args, **kwargs):
+        pytest.fail("KitaruAgent should be bypassed during external evaluation")
+
+    monkeypatch.setenv("KITARU_TASK_INPUTS", ticket.model_dump_json())
+    monkeypatch.setenv("KITARU_EXTERNAL_EVALUATION", "1")
+    monkeypatch.setenv("OPENAI_MODEL", "openai:gpt-5-mini")
+    monkeypatch.setattr("returns_agent.agent.build_agent", build_raw_agent)
+    monkeypatch.setattr("returns_agent.agent.KitaruAgent", reject_wrapper)
+
+    asyncio.run(main())
+
+    assert calls == [
+        ("model", "openai:gpt-5-mini"),
+        ("raw", build_prompt(ticket)),
+    ]
+    assert capsys.readouterr().out == '{"action":"refund"}\n'
+
+
+def test_only_exact_external_evaluation_flag_bypasses_recording(
+    monkeypatch, capsys
+) -> None:
+    """Preserve the registered-worker wrapper for every other flag value."""
+    ticket = CASES[0]
+    calls: list[tuple[str, str]] = []
+    raw_agent = object()
+
+    class RecordedAgent:
+        def __init__(self, agent, *, session_name: str):
+            assert agent is raw_agent
+            calls.append(("session", session_name))
+
+        async def run(self, prompt: str) -> SimpleNamespace:
+            calls.append(("recorded", prompt))
+            return SimpleNamespace(
+                output=SimpleNamespace(model_dump_json=lambda: '{"action":"refund"}')
+            )
+
+    monkeypatch.setenv("KITARU_TASK_INPUTS", ticket.model_dump_json())
+    monkeypatch.setenv("KITARU_EXTERNAL_EVALUATION", "true")
+    monkeypatch.delenv("OPENAI_MODEL", raising=False)
+    monkeypatch.setattr(
+        "returns_agent.agent.build_agent",
+        lambda store, model: raw_agent if model == MODEL else pytest.fail(),
+    )
+    monkeypatch.setattr("returns_agent.agent.KitaruAgent", RecordedAgent)
+
+    asyncio.run(main())
+
+    assert calls == [
+        ("session", f"Returns ticket: {ticket.ticket_id}"),
+        ("recorded", build_prompt(ticket)),
+    ]
+    assert capsys.readouterr().out == '{"action":"refund"}\n'
 
 
 def test_baseline_agent_exposes_the_mock_commerce_tools() -> None:
