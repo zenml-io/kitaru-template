@@ -1,10 +1,12 @@
 """PydanticAI returns resolver run directly or by a Kitaru worker."""
 
 import asyncio
+import json
+import os
 from decimal import Decimal
-from typing import Any
+from typing import Any, cast
 
-from kitaru.task import get_task_inputs
+from kitaru.task import get_task_inputs as get_kitaru_task_inputs
 from kitaru_pydantic_ai import KitaruAgent
 from pydantic_ai import Agent
 from pydantic_ai.models import KnownModelName, Model
@@ -53,6 +55,19 @@ def get_ticket_input(value: Any) -> TicketInput:
             raise ValueError("The imported session has no turns.")
         value = turns[-1].get("inputs")
     return TicketInput.model_validate(value)
+
+
+def get_runtime_inputs() -> Any:
+    """Read task inputs from an external evaluator or a Kitaru worker."""
+    inputs = os.environ.get("KITARU_TASK_INPUTS")
+    if inputs is not None:
+        return json.loads(inputs)
+    return get_kitaru_task_inputs()
+
+
+def get_runtime_model() -> KnownModelName:
+    """Use an evaluator-selected model or the example default."""
+    return cast(KnownModelName, os.environ.get("OPENAI_MODEL", MODEL))
 
 
 def build_prompt(ticket: TicketInput) -> str:
@@ -114,14 +129,20 @@ def build_agent(
 
 
 async def main() -> None:
-    """Resolve one replayed ticket and record its session in Kitaru."""
-    ticket = get_ticket_input(get_task_inputs())
-    pydantic_agent = build_agent(MockCommerceStore())
+    """Resolve one replayed ticket in the selected execution mode."""
+    ticket = get_ticket_input(get_runtime_inputs())
+    pydantic_agent = build_agent(MockCommerceStore(), get_runtime_model())
+    prompt = build_prompt(ticket)
+    if os.environ.get("KITARU_EXTERNAL_EVALUATION") == "1":
+        result = await pydantic_agent.run(prompt)
+        print(result.output.model_dump_json())
+        return
+
     agent = KitaruAgent(
         pydantic_agent,
         session_name=f"Returns ticket: {ticket.ticket_id}",
     )
-    result = await agent.run(build_prompt(ticket))
+    result = await agent.run(prompt)
     print(result.output.model_dump_json())
 
 
