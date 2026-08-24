@@ -8,14 +8,21 @@ import subprocess
 import sys
 import time
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
+from kitaru.task.importer import ImportedSession, flatten_nodes
+from kitaru_langfuse_importer.importer import parse
+
+from returns_agent.fixtures import CASES
+from tests.canonical_returns_evaluator import evaluate as evaluate_canonical_outcome
 
 EXAMPLE_DIR = Path(__file__).parents[1]
 README_PATH = EXAMPLE_DIR / "README.md"
 TEST_ASSETS_DIR = EXAMPLE_DIR / "tests"
 EVALUATOR_FIXTURE_PATH = TEST_ASSETS_DIR / "canonical_returns_evaluator.py"
+TRACE_PATH = EXAMPLE_DIR / "traces" / "langfuse-traces.jsonl"
 CLI = Path(sys.executable).with_name("kitaru")
 
 pytestmark = pytest.mark.skipif(
@@ -94,6 +101,15 @@ def _ticket_id(session: dict[str, Any]) -> str:
     return ticket_id
 
 
+def _action(session: dict[str, Any]) -> str:
+    """Read the imported session's reported terminal action."""
+    outputs = session["outputs"]
+    assert isinstance(outputs, dict)
+    action = outputs.get("action")
+    assert isinstance(action, str)
+    return action
+
+
 def _write_test_evaluator(path: Path) -> None:
     """Copy the test-only evaluator used by the deterministic smoke path."""
     shutil.copyfile(EVALUATOR_FIXTURE_PATH, path)
@@ -155,8 +171,9 @@ def test_canonical_example_completes_import_to_cohorts(tmp_path: Path) -> None:
             _cli(*_get_readme_command("import"), "--timeout", "180")
 
             baseline = _items(*_get_readme_command("list"))
-            assert len(baseline) == 10
+            assert len(baseline) == 30
             sessions_by_ticket = {_ticket_id(item): item["id"] for item in baseline}
+            assert set(sessions_by_ticket) == {ticket.ticket_id for ticket in CASES}
 
             _cli(
                 "session",
@@ -175,17 +192,14 @@ def test_canonical_example_completes_import_to_cohorts(tmp_path: Path) -> None:
             )
 
             reviewed_tickets = {
-                "ticket-003": ("problematic", "escalate"),
-                "ticket-004": ("problematic", "escalate"),
-                "ticket-007": ("problematic", "escalate"),
+                "ticket-012": ("problematic", "escalate"),
+                "ticket-017": ("acceptable", "refund"),
                 "ticket-001": ("acceptable", "refund"),
-                "ticket-009": ("acceptable", "refund"),
-                "ticket-010": ("acceptable", "refund"),
             }
-            terminal_tools = {
-                "issue_refund",
-                "create_replacement",
-                "escalate_to_human",
+            action_to_tool = {
+                "refund": "issue_refund",
+                "replacement": "create_replacement",
+                "escalate": "escalate_to_human",
             }
             evidence_nodes: dict[str, str] = {}
             investigation_arguments = [
@@ -199,6 +213,8 @@ def test_canonical_example_completes_import_to_cohorts(tmp_path: Path) -> None:
             ]
             for ticket_id in reviewed_tickets:
                 session_id = sessions_by_ticket[ticket_id]
+                session = next(item for item in baseline if item["id"] == session_id)
+                terminal_tool = action_to_tool[_action(session)]
                 nodes = _items(
                     "session",
                     "nodes",
@@ -208,7 +224,9 @@ def test_canonical_example_completes_import_to_cohorts(tmp_path: Path) -> None:
                     "100",
                 )
                 evidence = next(
-                    node for node in nodes if node.get("tool_name") in terminal_tools
+                    node
+                    for node in reversed(nodes)
+                    if node.get("tool_name") == terminal_tool
                 )
                 evidence_nodes[ticket_id] = evidence["id"]
                 question = (
@@ -234,7 +252,7 @@ def test_canonical_example_completes_import_to_cohorts(tmp_path: Path) -> None:
                 "--size",
                 "20",
             )
-            assert len(linked_sessions) == 6
+            assert len(linked_sessions) == 3
             links_by_session = {
                 item["session_id"]: item["id"] for item in linked_sessions
             }
@@ -247,25 +265,32 @@ def test_canonical_example_completes_import_to_cohorts(tmp_path: Path) -> None:
                 _cli(
                     "annotation",
                     "create",
-                    "--investigation-session",
-                    investigation_session_id,
-                    "--question-key",
-                    "outcome",
+                    "--session",
+                    session_id,
                     "--selector",
                     selector,
                     "--value",
-                    json.dumps("Reviewed against the automatic refund policy."),
+                    json.dumps(
+                        "Agent observation: Inspect the reported action beside "
+                        "the highlighted terminal tool evidence."
+                    ),
                 )
-                _cli(
-                    "annotation",
-                    "create",
-                    "--investigation-session",
-                    investigation_session_id,
-                    "--question-key",
-                    "outcome",
-                    "--value",
-                    json.dumps({"action": expected_action}, separators=(",", ":")),
-                )
+                if ticket_id == "ticket-012":
+                    _cli(
+                        "annotation",
+                        "create",
+                        "--investigation-session",
+                        investigation_session_id,
+                        "--question-key",
+                        "outcome",
+                        "--selector",
+                        selector,
+                        "--value",
+                        json.dumps(
+                            f"The agent should have {expected_action}d because "
+                            "the accepted refund bypassed the required approval path."
+                        ),
+                    )
                 _cli(
                     "investigation",
                     "session",
@@ -280,7 +305,7 @@ def test_canonical_example_completes_import_to_cohorts(tmp_path: Path) -> None:
                 "item"
             ]
             assert completed_investigation["status"] == "completed"
-            assert completed_investigation["completed_sessions"] == 6
+            assert completed_investigation["completed_sessions"] == 3
             annotation_filter = json.dumps(
                 {
                     "field": "investigation_id",
@@ -297,9 +322,9 @@ def test_canonical_example_completes_import_to_cohorts(tmp_path: Path) -> None:
                 "--size",
                 "100",
             )
-            assert len(annotations) == 12
-            assert sum(item["selector"] is not None for item in annotations) == 6
-            assert sum(isinstance(item["value"], str) for item in annotations) == 6
+            assert len(annotations) == 1
+            assert annotations[0]["selector"] is not None
+            assert isinstance(annotations[0]["value"], str)
             assert all(
                 not (isinstance(item["value"], dict) and "judgment" in item["value"])
                 for item in annotations
@@ -342,34 +367,45 @@ def test_canonical_example_completes_import_to_cohorts(tmp_path: Path) -> None:
             baseline_policy = _items(
                 "evaluation", "list", "--filter", policy_filter, "--size", "100"
             )
-            assert len(baseline_policy) == 10
-            assert sum(item["passed"] is False for item in baseline_policy) == 3
+            assert len(baseline_policy) == 30
+            imported_sessions = [
+                item
+                for item in parse(
+                    TRACE_PATH.read_bytes(),
+                    {"source_instance": "kitaru-template-e2e"},
+                )
+                if isinstance(item, ImportedSession)
+            ]
+            expected_policy = {
+                sessions_by_ticket[
+                    session.inputs["turns"][-1]["inputs"]["ticket_id"]
+                ]: evaluate_canonical_outcome(
+                    SimpleNamespace(
+                        session=SimpleNamespace(
+                            inputs=session.inputs,
+                            outputs=session.outputs,
+                        ),
+                        nodes=flatten_nodes(session.nodes),
+                    )
+                ).passed
+                for session in imported_sessions
+            }
+            assert {
+                item["session_id"]: item["passed"] for item in baseline_policy
+            } == expected_policy
 
             _cli(
                 "cohort",
                 "create",
-                "unsafe-refund-baseline",
+                "reviewed-returns-baseline",
                 "--agent",
                 "returns-resolver",
                 "--session",
-                sessions_by_ticket["ticket-003"],
+                sessions_by_ticket["ticket-012"],
                 "--session",
-                sessions_by_ticket["ticket-004"],
-                "--session",
-                sessions_by_ticket["ticket-007"],
-            )
-            _cli(
-                "cohort",
-                "create",
-                "safe-refund-control",
-                "--agent",
-                "returns-resolver",
+                sessions_by_ticket["ticket-017"],
                 "--session",
                 sessions_by_ticket["ticket-001"],
-                "--session",
-                sessions_by_ticket["ticket-009"],
-                "--session",
-                sessions_by_ticket["ticket-010"],
             )
         finally:
             worker.terminate()

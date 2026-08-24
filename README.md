@@ -1,16 +1,8 @@
 # Investigate a PydanticAI agent with Kitaru
 
-This repository is a ready-to-run Kitaru investigation template. It contains a PydanticAI returns agent, ten checked-in Langfuse traces with model-generated reasoning summaries, and deterministic tests. All customers, orders, shipments, and actions are synthetic. Refund and replacement tools modify only an in-memory store.
+This repository is a ready-to-run Kitaru investigation template. It contains a PydanticAI returns agent, 30 checked-in Langfuse traces with model-generated reasoning summaries, and deterministic tests. All customers, orders, shipments, and actions are synthetic. Refund and replacement tools modify only an in-memory store.
 
 Use this README to prepare the template and import its starting evidence. Continue with the [complete returns-agent tutorial](https://github.com/zenml-io/kitaru/tree/develop/docs/book/tutorials/returns-agent) for the investigation, evaluator, replay, and comparison method.
-
-## Watch the guided tour
-
-Want to see the complete Kitaru loop without setting anything up first? [Watch the 26-minute guided tour](https://youtu.be/aYLfzXEr2Rk). Alex starts with the Kitaru Quickstart, then uses the `kitaru-guided-tour` skill on this template to review recorded sessions, define an evaluator and cohort, replay one improvement, and compare the result.
-
-<p align="center">
-  <a href="https://youtu.be/aYLfzXEr2Rk"><img src="assets/kitaru-guided-tour.webp" alt="Watch the Kitaru guided tour on YouTube"></a>
-</p>
 
 ## Requirements
 
@@ -45,10 +37,10 @@ uv run kitaru session list \
   --agent returns-resolver \
   --tag returns-baseline \
   --origin imported \
-  --size 20
+  --size 30
 ```
 
-If the agent and its ten imported sessions already exist, skip to [Continue with a coding agent](#continue-with-a-coding-agent). The guided tour will inspect and resume that state before it creates anything. If neither exists, continue with the registration below. If only part of the setup exists, or `returns-resolver` belongs to another project, select a different server so the fixed template names do not collide.
+If the agent and all 30 imported sessions already exist, skip to [Continue with a coding agent](#continue-with-a-coding-agent). The expanded tour will inspect and resume that state before it creates anything. If neither exists, continue with the registration below. If only part of the setup exists, or `returns-resolver` belongs to another project, select a different server so the fixed template names do not collide.
 
 If no usable server is selected and you want an isolated local server for the template, start and select one with Docker:
 
@@ -102,7 +94,7 @@ uv run kitaru session import \
   --wait
 ```
 
-Confirm that all ten sessions are available:
+Confirm that all 30 sessions are available:
 
 <!-- e2e:list -->
 
@@ -110,26 +102,29 @@ Confirm that all ten sessions are available:
 uv run kitaru session list \
   --tag returns-baseline \
   --origin imported \
-  --size 20
+  --size 30
 ```
 
 ## Continue with a coding agent
 
-Install the Kitaru skills:
+Install `kitaru-workshop-tour` from the compatible companion `kitaru-skills` feature checkout. Replace the example absolute path with that checkout's path:
 
 ```bash
-npx skills add zenml-io/kitaru-skills
+npx skills add /absolute/path/to/kitaru-skills \
+  --skill kitaru-workshop-tour \
+  --copy \
+  --yes
 ```
 
 Then give your coding agent this prompt:
 
 ```text
-Use the kitaru-guided-tour skill with the registered returns-resolver agent
-and the sessions tagged returns-baseline. Walk me through the prepared review
-and show me the relevant trace evidence before asking for each judgment. Once
-we agree on a behavior to improve, help me turn it into an evaluator and test
-one small change. Show me the full run plan and ask before changing code or
-starting paid model work.
+Use the kitaru-workshop-tour skill with the registered returns-resolver agent
+and the sessions tagged returns-baseline. Survey all 30 sessions, show me the
+evidence-selected shortlist, and ask me for the required human judgments.
+Once we confirm a behavior to improve, help me turn it into one evaluator and
+test one small change. Show me the full run plan and ask before changing code
+or starting paid model work.
 ```
 
 The skill stores investigation state in Kitaru and can resume from existing agents, import jobs, tags, and sessions. The [complete tutorial](https://github.com/zenml-io/kitaru/tree/develop/docs/book/tutorials/returns-agent) explains the five-step method and the commands behind it.

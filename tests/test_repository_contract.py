@@ -20,7 +20,7 @@ def test_readme_owns_setup_without_copying_the_tutorial() -> None:
     readme = (ROOT / "README.md").read_text()
     assert "git clone https://github.com/zenml-io/kitaru-template.git" in readme
     assert "traces/langfuse-traces.jsonl" in readme
-    assert "kitaru-guided-tour" in readme
+    assert "kitaru-workshop-tour" in readme
     assert "kitaru-investigation" in readme
     assert "getting-started/quickstart" in readme
     assert "Show me the full run plan" in readme
@@ -37,8 +37,18 @@ def test_readme_owns_setup_without_copying_the_tutorial() -> None:
     )
     assert worker_command in readme
     assert readme.index(worker_command) < readme.index("kitaru session import")
-    assert readme.index("kitaru-guided-tour") < readme.index("kitaru-investigation")
+    assert "all 30 sessions" in readme
+    assert "--size 30" in readme
+    assert "kitaru-skills" in readme
+    assert "npx skills add /absolute/path/to/kitaru-skills" in readme
+    assert "--skill kitaru-workshop-tour" in readme
+    assert "26-minute" not in readme
+    assert readme.index("kitaru-workshop-tour") < readme.index("kitaru-investigation")
     assert len(readme.splitlines()) < 180
+
+    guidance = (ROOT / "CLAUDE.md").read_text()
+    assert "30 checked-in Langfuse traces" in guidance
+    assert "the 30 `CASES` ticket inputs" in guidance
 
 
 def test_development_checks_are_locked_with_the_template() -> None:

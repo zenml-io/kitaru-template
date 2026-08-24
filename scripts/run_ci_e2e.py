@@ -1,5 +1,6 @@
 """Run the template end-to-end test against an isolated Kitaru server."""
 
+import asyncio
 import os
 import signal
 import subprocess
@@ -8,9 +9,13 @@ import tempfile
 import time
 import urllib.error
 import urllib.request
+import uuid
 from pathlib import Path
 
+import asyncpg
+
 ROOT = Path(__file__).parents[1]
+TEST_DATABASE_NAME = f"kitaru_template_e2e_{uuid.uuid4().hex}"
 
 
 def _read_log(path: Path) -> str:
@@ -69,7 +74,9 @@ def _get_server_environment() -> dict[str, str]:
             "KITARU_SERVER_AUTH_SCHEME": "none",
             "KITARU_SERVER_DB_HOST": "127.0.0.1",
             "KITARU_SERVER_DB_PORT": os.environ.get("KITARU_TEMPLATE_DB_PORT", "5433"),
+            "KITARU_SERVER_DB_NAME": TEST_DATABASE_NAME,
             "KITARU_SERVER_DB_PWD": "password",
+            "KITARU_SERVER_DB_USER": "postgres",
             "KITARU_SERVER_SECRET_ENCRYPTION_KEY": (
                 "ci-only-encryption-key-ci-only-encryption-key"
             ),
@@ -80,6 +87,23 @@ def _get_server_environment() -> dict[str, str]:
         }
     )
     return environment
+
+
+async def _drop_test_database(environment: dict[str, str]) -> None:
+    """Drop the process-specific database after its server has stopped."""
+    connection = await asyncpg.connect(
+        host=environment["KITARU_SERVER_DB_HOST"],
+        port=int(environment["KITARU_SERVER_DB_PORT"]),
+        user=environment["KITARU_SERVER_DB_USER"],
+        password=environment["KITARU_SERVER_DB_PWD"],
+        database="postgres",
+    )
+    try:
+        await connection.execute(
+            f'DROP DATABASE IF EXISTS "{TEST_DATABASE_NAME}" WITH (FORCE)'
+        )
+    finally:
+        await connection.close()
 
 
 def _run_e2e_test(environment: dict[str, str]) -> int:
@@ -111,6 +135,7 @@ def main() -> int:
     test_environment["KITARU_CANONICAL_API_KEY"] = "canonical-ci-worker"
 
     with tempfile.TemporaryDirectory(prefix="kitaru-template-e2e-") as temporary:
+        asyncio.run(_drop_test_database(server_environment))
         log_path = Path(temporary) / "kitaru-server.log"
         worker_log_path = Path(temporary) / "kitaru-worker.log"
         test_environment["KITARU_CANONICAL_WORKER_LOG"] = str(worker_log_path)
@@ -149,6 +174,13 @@ def main() -> int:
                 return 1
             finally:
                 _stop_process(server)
+                try:
+                    asyncio.run(_drop_test_database(server_environment))
+                except Exception as error:
+                    print(
+                        f"Could not drop test database {TEST_DATABASE_NAME}: {error}",
+                        file=sys.stderr,
+                    )
 
 
 if __name__ == "__main__":
