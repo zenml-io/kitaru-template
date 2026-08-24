@@ -1,4 +1,4 @@
-# Kitaru canonical example moved
+# PydanticAI returns agent moved
 
 The maintained Python returns-agent example now lives in the main Kitaru repository:
 
