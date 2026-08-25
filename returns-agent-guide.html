@@ -133,6 +133,13 @@
       .message.outcome .bubble { border: 1px solid #b8e5d4; background: var(--green-soft); color: #07593e; }
       .message.note .bubble { border: 1px solid #f2cf9a; background: var(--amber-soft); color: #794300; }
 
+      .policy-message .bubble { padding: 0; overflow: hidden; border: 1px solid #cbd8ff; background: var(--panel); }
+      .policy-tool { padding: 10px 12px; background: var(--blue-soft); color: #24439c; font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 0.8rem; }
+      .policy-rule { display: grid; grid-template-columns: 110px 1fr; gap: 10px; padding: 10px 12px; border-top: 1px solid var(--line); }
+      .policy-rule-label { color: var(--muted); font-size: 0.78rem; font-weight: 700; }
+      .policy-rule strong, .policy-rule span { display: block; font-size: 0.84rem; line-height: 1.35; }
+      .policy-rule span { margin-top: 2px; color: var(--green); }
+
       .policy-panel { padding: 0; overflow: hidden; }
       .policy-panel h2 { padding: 24px 24px 16px; }
       table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
@@ -145,6 +152,7 @@
       @media (max-width: 620px) {
         main { width: min(100% - 28px, 660px); padding-top: 26px; }
         .flow-branch { grid-template-columns: 1fr; }
+        .policy-rule { grid-template-columns: 1fr; gap: 2px; }
         .policy-wrap { overflow-x: auto; }
         table { min-width: 650px; }
       }
@@ -225,8 +233,15 @@
           messages: [
             ["Customer", "My final-sale Linen Shirt arrived with a torn sleeve. Please refund it."],
             ["Agent", "I need the order and the policy for this category."],
-            ["Tool", "lookup_order → final-sale apparel order, delivered recently"],
-            ["Tool", "get_return_policy('apparel') → 30-day window; final-sale defect exception: yes; human approval threshold: $150"],
+            ["Tool", "lookup_order → final-sale apparel order, delivered 28 days ago"],
+            { policy: {
+              tool: "get_return_policy('apparel')",
+              rules: [
+                ["Return window", "30 days", "This order is 28 days old, so it is inside the window."],
+                ["Final sale", "Defect exception: yes", "The reported defect qualifies for the exception."],
+                ["Approval", "$150 threshold", "The $72 order is below the threshold."]
+              ]
+            } },
             ["Action", "issue_refund → the apparel defect exception supports a refund."],
             ["Reply", "I have issued the refund and will confirm the amount in your return details."]
           ]
@@ -236,8 +251,15 @@
           messages: [
             ["Customer", "My final-sale Silk Scarf arrived with a pulled thread. I would like a refund."],
             ["Agent", "This needs a separate policy check because it is an accessory."],
-            ["Tool", "lookup_order → final-sale accessories order"],
-            ["Tool", "get_return_policy('accessories') → 14-day window; final-sale defect exception: no; human approval threshold: $100"],
+            ["Tool", "lookup_order → final-sale accessories order, delivered 7 days ago"],
+            { policy: {
+              tool: "get_return_policy('accessories')",
+              rules: [
+                ["Return window", "14 days", "This order is 7 days old, so it is inside the window."],
+                ["Final sale", "Defect exception: no", "The agent cannot refund this final-sale item automatically."],
+                ["Approval", "$100 threshold", "The $65 order is below the threshold."]
+              ]
+            } },
             ["Action", "escalate_to_human → the final-sale defect exception does not apply."],
             ["Reply", "I have sent this to a specialist to review the exception request."]
           ]
@@ -276,7 +298,39 @@
       function renderScenario(name) {
         const scenario = scenarios[name];
         conversation.replaceChildren();
-        for (const [speaker, text] of scenario.messages) {
+        for (const item of scenario.messages) {
+          if ("policy" in item) {
+            const message = document.createElement("div");
+            message.className = "message policy-message";
+            const speaker = document.createElement("div");
+            speaker.className = "speaker";
+            speaker.textContent = "Tool";
+            const bubble = document.createElement("div");
+            bubble.className = "bubble";
+            const tool = document.createElement("div");
+            tool.className = "policy-tool";
+            tool.textContent = item.policy.tool;
+            bubble.append(tool);
+            for (const [label, rule, meaning] of item.policy.rules) {
+              const row = document.createElement("div");
+              row.className = "policy-rule";
+              const rowLabel = document.createElement("div");
+              rowLabel.className = "policy-rule-label";
+              rowLabel.textContent = label;
+              const detail = document.createElement("div");
+              const policyRule = document.createElement("strong");
+              policyRule.textContent = rule;
+              const outcome = document.createElement("span");
+              outcome.textContent = meaning;
+              detail.append(policyRule, outcome);
+              row.append(rowLabel, detail);
+              bubble.append(row);
+            }
+            message.append(speaker, bubble);
+            conversation.append(message);
+            continue;
+          }
+          const [speaker, text] = item;
           const message = document.createElement("div");
           message.className = "message";
           if (speaker === "Tool") message.classList.add("tool-message");
