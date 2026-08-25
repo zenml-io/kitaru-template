@@ -3,10 +3,9 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Returns agent guide</title>
+    <title>Returns agent overview</title>
     <style>
       :root {
-        color-scheme: light dark;
         --ink: #172033;
         --muted: #667085;
         --canvas: #f7f8fc;
@@ -16,10 +15,9 @@
         --blue-soft: #e9efff;
         --green: #087a52;
         --green-soft: #e7f7f0;
-        --amber: #a65d00;
+        --amber: #8a4c00;
         --amber-soft: #fff2dc;
         --red: #b42318;
-        --red-soft: #ffebe9;
       }
 
       * { box-sizing: border-box; }
@@ -32,46 +30,52 @@
       }
 
       main {
-        width: min(1160px, calc(100% - 40px));
+        width: min(920px, calc(100% - 40px));
         margin: 0 auto;
         padding: 38px 0 56px;
       }
 
       h1, h2, h3, p { margin: 0; }
-
-      h1 { font-size: clamp(2rem, 4vw, 3.25rem); letter-spacing: -0.045em; }
+      h1 { font-size: clamp(2rem, 4vw, 3rem); letter-spacing: -0.045em; }
       h2 { font-size: 1.15rem; }
       h3 { font-size: 0.95rem; }
 
-      .eyebrow {
+      .tabs {
+        display: flex;
+        gap: 2px;
+        margin-top: 22px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      button {
+        padding: 10px 13px;
+        border: 0;
+        border-bottom: 2px solid transparent;
+        background: transparent;
+        color: var(--muted);
+        cursor: pointer;
+        font: inherit;
+        font-size: 0.88rem;
+      }
+
+      button[aria-selected="true"] {
+        border-bottom-color: var(--blue);
         color: var(--blue);
-        font-size: 0.75rem;
         font-weight: 750;
-        letter-spacing: 0.12em;
-        text-transform: uppercase;
       }
 
-      .lede { max-width: 780px; margin-top: 12px; color: var(--muted); font-size: 1.05rem; line-height: 1.55; }
-
-      .layout {
-        display: grid;
-        grid-template-columns: minmax(0, 0.92fr) minmax(320px, 1.08fr);
-        gap: 20px;
-        margin-top: 30px;
-      }
+      button:focus-visible { outline: 3px solid #a9bcff; outline-offset: -2px; }
 
       .panel {
-        padding: 22px;
+        margin-top: 24px;
+        padding: 24px;
         border: 1px solid var(--line);
         border-radius: 18px;
         background: var(--panel);
         box-shadow: 0 12px 30px rgb(22 32 51 / 0.06);
       }
 
-      .panel-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
-      .hint { color: var(--muted); font-size: 0.83rem; }
-
-      .flow { position: relative; display: grid; gap: 11px; margin-top: 20px; }
+      .flow { position: relative; display: grid; gap: 12px; margin-top: 20px; }
       .flow::before {
         position: absolute;
         top: 25px;
@@ -96,132 +100,117 @@
         font-weight: 750;
       }
 
-      .step-copy { padding: 10px 12px; border-radius: 10px; background: #fafbff; }
-      .step-copy p { margin-top: 3px; color: var(--muted); font-size: 0.82rem; line-height: 1.35; }
-      .tool { color: var(--blue); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.78rem; }
+      .step-copy { padding: 11px 13px; border-radius: 10px; background: #fafbff; }
+      .step-copy p { margin-top: 3px; color: var(--muted); font-size: 0.84rem; line-height: 1.4; }
+      .tool { color: var(--blue); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.79rem; }
 
       .flow-branch { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding-left: 54px; }
-      .branch { padding: 10px; border: 1px solid var(--line); border-radius: 10px; font-size: 0.8rem; line-height: 1.35; }
+      .branch { padding: 11px; border: 1px solid var(--line); border-radius: 10px; font-size: 0.82rem; line-height: 1.4; }
       .branch strong { display: block; margin-bottom: 3px; }
       .branch.delivery { background: #f5f8ff; }
       .branch.returns { background: #fffaf2; }
 
-      .conversation { margin-top: 20px; }
-      .scenario-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
-      button {
+      .scenario-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 16px; }
+      .scenario-tabs button {
         padding: 7px 10px;
         border: 1px solid var(--line);
         border-radius: 999px;
-        background: var(--panel);
         color: var(--ink);
-        cursor: pointer;
-        font: inherit;
         font-size: 0.78rem;
       }
-      button[aria-pressed="true"] { border-color: var(--blue); background: var(--blue-soft); color: #183b9e; font-weight: 700; }
+      .scenario-tabs button[aria-pressed="true"] { border-color: var(--blue); background: var(--blue-soft); color: #183b9e; font-weight: 700; }
 
-      .message { display: grid; grid-template-columns: 90px 1fr; gap: 12px; margin-top: 11px; }
+      .message { display: grid; grid-template-columns: 86px 1fr; gap: 12px; margin-top: 11px; }
       .speaker { padding-top: 10px; color: var(--muted); font-size: 0.78rem; font-weight: 700; text-align: right; }
-      .bubble { padding: 10px 12px; border-radius: 12px; background: #f3f5f9; font-size: 0.9rem; line-height: 1.42; }
+      .bubble { padding: 10px 12px; border-radius: 12px; background: #f3f5f9; font-size: 0.92rem; line-height: 1.42; }
       .message.tool-message .bubble { border: 1px solid #cbd8ff; background: var(--blue-soft); color: #24439c; }
       .message.outcome .bubble { border: 1px solid #b8e5d4; background: var(--green-soft); color: #07593e; }
-      .message.caution .bubble { border: 1px solid #f2cf9a; background: var(--amber-soft); color: #794300; }
+      .message.note .bubble { border: 1px solid #f2cf9a; background: var(--amber-soft); color: #794300; }
 
-      .policy { margin-top: 20px; }
-      .policy .panel { padding: 0; overflow: hidden; }
-      .policy-header { display: flex; align-items: end; justify-content: space-between; gap: 20px; padding: 22px 22px 16px; }
-      .policy-header p { max-width: 580px; color: var(--muted); font-size: 0.9rem; line-height: 1.45; }
-      table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+      .policy-panel { padding: 0; overflow: hidden; }
+      .policy-panel h2 { padding: 24px 24px 16px; }
+      table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
       th, td { padding: 13px 14px; border-top: 1px solid var(--line); text-align: left; vertical-align: top; }
       th { background: #fafbff; color: var(--muted); font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; }
       tr.active-policy { background: var(--blue-soft); }
       .yes { color: var(--green); font-weight: 700; }
       .no { color: var(--red); font-weight: 700; }
 
-      .legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 14px; color: var(--muted); font-size: 0.78rem; }
-      .legend span::before { display: inline-block; width: 9px; height: 9px; margin-right: 6px; border-radius: 50%; background: var(--blue); content: ""; }
-      .legend span:nth-child(2)::before { background: var(--green); }
-      .legend span:nth-child(3)::before { background: var(--amber); }
-
-      @media (max-width: 780px) {
+      @media (max-width: 620px) {
         main { width: min(100% - 28px, 660px); padding-top: 26px; }
-        .layout { grid-template-columns: 1fr; }
-        .policy { overflow-x: auto; }
-        .policy .panel { min-width: 720px; }
+        .flow-branch { grid-template-columns: 1fr; }
+        .policy-wrap { overflow-x: auto; }
+        table { min-width: 650px; }
       }
     </style>
   </head>
   <body>
     <main>
-      <p class="eyebrow">Synthetic returns-agent example</p>
-      <h1>How the returns agent reaches a resolution</h1>
-      <p class="lede">The coding agent in the workshop inspects these recorded decisions. This is the separate customer-support agent that made them: it looks up evidence, applies a category policy, records one action, and writes a reply.</p>
+      <h1>Returns agent overview</h1>
 
-      <section class="layout" aria-label="Agent flow and example conversation">
+      <nav class="tabs" role="tablist" aria-label="Returns agent overview">
+        <button id="flow-tab" type="button" role="tab" aria-controls="flow-page" aria-selected="true">Agent flow</button>
+        <button id="example-tab" type="button" role="tab" aria-controls="example-page" aria-selected="false" tabindex="-1">Example</button>
+        <button id="policy-tab" type="button" role="tab" aria-controls="policy-page" aria-selected="false" tabindex="-1">Refund policy</button>
+      </nav>
+
+      <section id="flow-page" class="page" role="tabpanel" aria-labelledby="flow-tab">
         <article class="panel">
-          <div class="panel-heading">
-            <h2>One ticket, one terminal outcome</h2>
-            <span class="hint">six deterministic tools</span>
-          </div>
+          <h2>Agent flow</h2>
           <div class="flow">
             <div class="step">
               <div class="step-number">1</div>
-              <div class="step-copy"><h3>Read the customer request</h3><p>Identify a return, refund, delivery, or missing-order question.</p></div>
+              <div class="step-copy"><h3>Read the ticket</h3><p>Work out whether it is about a return, a refund, delivery, or a missing order.</p></div>
             </div>
             <div class="step">
               <div class="step-number">2</div>
-              <div class="step-copy"><h3>Find the order</h3><p><span class="tool">lookup_order</span> returns the product, category, price, delivery state, and prior actions.</p></div>
+              <div class="step-copy"><h3>Look up the order</h3><p><span class="tool">lookup_order</span> gives the product, category, price, delivery state, and any earlier action.</p></div>
             </div>
             <div class="flow-branch">
-              <div class="branch delivery"><strong>Delivery problem</strong><span class="tool">check_shipping</span> → replacement or escalation</div>
-              <div class="branch returns"><strong>Return or refund</strong><span class="tool">get_return_policy</span> → apply the category rules</div>
+              <div class="branch delivery"><strong>Delivery issue</strong><span class="tool">check_shipping</span> decides between a replacement and escalation.</div>
+              <div class="branch returns"><strong>Return or refund</strong><span class="tool">get_return_policy</span> gives the rules for that category.</div>
             </div>
             <div class="step">
               <div class="step-number">3</div>
-              <div class="step-copy"><h3>Choose one supported resolution</h3><p>Refund, replacement, or escalation. The recorded action is part of the evidence Kitaru preserves.</p></div>
+              <div class="step-copy"><h3>Choose an action</h3><p>The agent picks a refund, replacement, or escalation.</p></div>
             </div>
             <div class="step">
               <div class="step-number">4</div>
-              <div class="step-copy"><h3>Record the action, then reply</h3><p><span class="tool">issue_refund</span>, <span class="tool">create_replacement</span>, or <span class="tool">escalate_to_human</span> runs before the customer-facing reply.</p></div>
+              <div class="step-copy"><h3>Act, then reply</h3><p><span class="tool">issue_refund</span>, <span class="tool">create_replacement</span>, or <span class="tool">escalate_to_human</span> runs before the customer reply.</p></div>
             </div>
           </div>
-        </article>
-
-        <article class="panel">
-          <div class="panel-heading">
-            <h2>Follow a recorded-style situation</h2>
-            <span class="hint">choose a policy boundary</span>
-          </div>
-          <div class="conversation">
-            <div class="scenario-tabs" role="group" aria-label="Example situations">
-              <button type="button" data-scenario="apparel" aria-pressed="true">Final-sale apparel defect</button>
-              <button type="button" data-scenario="accessories" aria-pressed="false">Final-sale accessory defect</button>
-              <button type="button" data-scenario="delivery" aria-pressed="false">Lost delivery</button>
-            </div>
-            <div id="conversation" aria-live="polite"></div>
-          </div>
-          <div class="legend"><span>Evidence lookup</span><span>Recorded action</span><span>Human judgment may still matter</span></div>
         </article>
       </section>
 
-      <section class="policy" aria-labelledby="policy-title">
-        <div class="panel">
-          <div class="policy-header">
-            <div><p class="eyebrow">The rules the agent should consult</p><h2 id="policy-title">Refund policy by product category</h2></div>
-            <p>Every category has a defect path and an unused-return rule within its window. Final-sale exceptions and human-approval thresholds differ, which is why the recorded tool calls matter.</p>
+      <section id="example-page" class="page" role="tabpanel" aria-labelledby="example-tab" hidden>
+        <article class="panel">
+          <h2>Example</h2>
+          <div class="scenario-tabs" role="group" aria-label="Example situations">
+            <button type="button" data-scenario="apparel" aria-pressed="true">Final-sale apparel defect</button>
+            <button type="button" data-scenario="accessories" aria-pressed="false">Final-sale accessory defect</button>
+            <button type="button" data-scenario="delivery" aria-pressed="false">Lost delivery</button>
           </div>
-          <table>
-            <thead>
-              <tr><th>Category</th><th>Return window</th><th>Final-sale defect exception</th><th>Human approval threshold</th></tr>
-            </thead>
-            <tbody>
-              <tr data-policy="footwear"><td>Footwear</td><td>30 days</td><td class="yes">Yes</td><td>$150</td></tr>
-              <tr data-policy="apparel"><td>Apparel</td><td>30 days</td><td class="yes">Yes</td><td>$150</td></tr>
-              <tr data-policy="accessories"><td>Accessories</td><td>14 days</td><td class="no">No</td><td>$100</td></tr>
-              <tr data-policy="luggage"><td>Luggage</td><td>45 days</td><td class="yes">Yes</td><td>$200</td></tr>
-            </tbody>
-          </table>
-        </div>
+          <div id="conversation" aria-live="polite"></div>
+        </article>
+      </section>
+
+      <section id="policy-page" class="page" role="tabpanel" aria-labelledby="policy-tab" hidden>
+        <article class="panel policy-panel">
+          <h2>Refund policy</h2>
+          <div class="policy-wrap">
+            <table>
+              <thead>
+                <tr><th>Category</th><th>Return window</th><th>Final-sale defect exception</th><th>Human approval threshold</th></tr>
+              </thead>
+              <tbody>
+                <tr data-policy="footwear"><td>Footwear</td><td>30 days</td><td class="yes">Yes</td><td>$150</td></tr>
+                <tr data-policy="apparel"><td>Apparel</td><td>30 days</td><td class="yes">Yes</td><td>$150</td></tr>
+                <tr data-policy="accessories"><td>Accessories</td><td>14 days</td><td class="no">No</td><td>$100</td></tr>
+                <tr data-policy="luggage"><td>Luggage</td><td>45 days</td><td class="yes">Yes</td><td>$200</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
       </section>
     </main>
 
@@ -231,40 +220,54 @@
           policy: "apparel",
           messages: [
             ["Customer", "My final-sale Linen Shirt arrived with a torn sleeve. Please refund it."],
-            ["Agent", "First I need the order and the policy that applies."],
-            ["Tool evidence", "lookup_order → final-sale apparel order, delivered recently"],
-            ["Tool evidence", "get_return_policy('apparel') → 30-day window; final-sale defect exception: yes; human approval threshold: $150"],
-            ["Recorded action", "issue_refund → a full refund can be supported by the apparel defect exception."],
-            ["Customer reply", "I have issued the refund and will confirm the amount in your return details."]
+            ["Agent", "I need the order and the policy for this category."],
+            ["Tool", "lookup_order → final-sale apparel order, delivered recently"],
+            ["Tool", "get_return_policy('apparel') → 30-day window; final-sale defect exception: yes; human approval threshold: $150"],
+            ["Action", "issue_refund → the apparel defect exception supports a refund."],
+            ["Reply", "I have issued the refund and will confirm the amount in your return details."]
           ]
         },
         accessories: {
           policy: "accessories",
           messages: [
             ["Customer", "My final-sale Silk Scarf arrived with a pulled thread. I would like a refund."],
-            ["Agent", "This looks similar to the apparel example, but the category changes the policy."],
-            ["Tool evidence", "lookup_order → final-sale accessories order"],
-            ["Tool evidence", "get_return_policy('accessories') → 14-day window; final-sale defect exception: no; human approval threshold: $100"],
-            ["Recorded action", "escalate_to_human → the normal final-sale defect exception does not apply here."],
-            ["Customer reply", "I have sent this to a specialist to review the exception request."]
+            ["Agent", "This needs a separate policy check because it is an accessory."],
+            ["Tool", "lookup_order → final-sale accessories order"],
+            ["Tool", "get_return_policy('accessories') → 14-day window; final-sale defect exception: no; human approval threshold: $100"],
+            ["Action", "escalate_to_human → the final-sale defect exception does not apply."],
+            ["Reply", "I have sent this to a specialist to review the exception request."]
           ]
         },
         delivery: {
           policy: null,
           messages: [
             ["Customer", "The carrier says my duffel is lost in transit. A replacement would help."],
-            ["Agent", "This is a delivery question, so shipping evidence matters more than the return policy."],
-            ["Tool evidence", "lookup_order → shipped luggage order"],
-            ["Tool evidence", "check_shipping → carrier status: lost in transit"],
-            ["Recorded action", "create_replacement → the agent records a replacement before replying."],
-            ["Customer reply", "I have arranged a replacement and will send the new tracking details shortly."]
+            ["Agent", "I need the shipping status for this one."],
+            ["Tool", "lookup_order → shipped luggage order"],
+            ["Tool", "check_shipping → carrier status: lost in transit"],
+            ["Action", "create_replacement → record the replacement before replying."],
+            ["Reply", "I have arranged a replacement and will send the new tracking details shortly."]
           ]
         }
       };
 
+      const pageTabs = [...document.querySelectorAll('[role="tab"]')];
+      const pages = pageTabs.map((tab) => document.getElementById(tab.getAttribute("aria-controls")));
       const conversation = document.getElementById("conversation");
-      const buttons = document.querySelectorAll("[data-scenario]");
+      const scenarioButtons = document.querySelectorAll("[data-scenario]");
       const policyRows = document.querySelectorAll("[data-policy]");
+      let selectedPage = 0;
+
+      function showPage(index, shouldFocus = false) {
+        selectedPage = (index + pageTabs.length) % pageTabs.length;
+        pageTabs.forEach((tab, tabIndex) => {
+          const selected = tabIndex === selectedPage;
+          tab.setAttribute("aria-selected", String(selected));
+          tab.tabIndex = selected ? 0 : -1;
+          pages[tabIndex].hidden = !selected;
+        });
+        if (shouldFocus) pageTabs[selectedPage].focus();
+      }
 
       function renderScenario(name) {
         const scenario = scenarios[name];
@@ -272,17 +275,32 @@
         for (const [speaker, text] of scenario.messages) {
           const message = document.createElement("div");
           message.className = "message";
-          if (speaker === "Tool evidence") message.classList.add("tool-message");
-          if (speaker === "Recorded action") message.classList.add("outcome");
-          if (speaker === "Agent") message.classList.add("caution");
+          if (speaker === "Tool") message.classList.add("tool-message");
+          if (speaker === "Action") message.classList.add("outcome");
+          if (speaker === "Agent") message.classList.add("note");
           message.innerHTML = `<div class="speaker">${speaker}</div><div class="bubble">${text}</div>`;
           conversation.append(message);
         }
-        for (const row of policyRows) row.classList.toggle("active-policy", row.dataset.policy === scenario.policy);
-        for (const button of buttons) button.setAttribute("aria-pressed", String(button.dataset.scenario === name));
+        policyRows.forEach((row) => row.classList.toggle("active-policy", row.dataset.policy === scenario.policy));
+        scenarioButtons.forEach((button) => button.setAttribute("aria-pressed", String(button.dataset.scenario === name)));
       }
 
-      for (const button of buttons) button.addEventListener("click", () => renderScenario(button.dataset.scenario));
+      pageTabs.forEach((tab, index) => {
+        tab.addEventListener("click", () => showPage(index));
+        tab.addEventListener("keydown", (event) => {
+          if (event.key === "ArrowRight") { event.preventDefault(); showPage(index + 1, true); }
+          if (event.key === "ArrowLeft") { event.preventDefault(); showPage(index - 1, true); }
+        });
+      });
+
+      document.addEventListener("keydown", (event) => {
+        const target = event.target;
+        if (event.defaultPrevented || (target instanceof Element && target.closest("[data-scenario]"))) return;
+        if (event.key === "ArrowRight") { event.preventDefault(); showPage(selectedPage + 1, true); }
+        if (event.key === "ArrowLeft") { event.preventDefault(); showPage(selectedPage - 1, true); }
+      });
+
+      scenarioButtons.forEach((button) => button.addEventListener("click", () => renderScenario(button.dataset.scenario)));
       renderScenario("apparel");
     </script>
   </body>
