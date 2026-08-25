@@ -117,6 +117,8 @@ uv run kitaru session list \
 
 ## Continue with a coding agent
 
+For a compact visual introduction to the synthetic returns agent and the category policy it should apply, open [returns-agent-guide.html](returns-agent-guide.html) in a browser before starting the tour.
+
 Install `kitaru-workshop-tour` from the compatible companion `kitaru-skills` feature checkout. Replace the example absolute path with that checkout's path:
 
 ```bash

@@ -21,6 +21,8 @@ def test_readme_owns_setup_without_copying_the_tutorial() -> None:
     assert "git clone https://github.com/zenml-io/kitaru-template.git" in readme
     assert "traces/langfuse-traces.jsonl" in readme
     assert "kitaru-workshop-tour" in readme
+    assert "returns-agent-guide.html" in readme
+    assert (ROOT / "returns-agent-guide.html").is_file()
     assert "kitaru-investigation" in readme
     assert "getting-started/quickstart" in readme
     assert "Show me the full run plan" in readme
