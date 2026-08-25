@@ -29,6 +29,11 @@ def test_readme_owns_setup_without_copying_the_tutorial() -> None:
     assert "docs/book/tutorials/returns-agent" in readme
     assert "examples/pydantic_ai_ticket_resolver" not in readme
     assert "If the selected server is healthy, keep using it" in readme
+    assert 'export KITARU_API_URL="https://your-kitaru-server.example"' in readme
+    assert "KITARU_API_KEY" in readme
+    assert 'kitaru login "$KITARU_API_URL"' in readme
+    assert "A new terminal does not inherit exports from the first one" in readme
+    assert "confirm that it reports the same Cloud URL" in readme
     assert "If no usable server is selected" in readme
     assert readme.index("kitaru status") < readme.index("kitaru login --local")
     assert "paid model calls" not in readme
@@ -36,6 +41,8 @@ def test_readme_owns_setup_without_copying_the_tutorial() -> None:
         "uv run kitaru worker start --name kitaru-template-worker --concurrency 10"
     )
     assert worker_command in readme
+    assert "--blob-cache-root .kitaru/cache/blobs" in readme
+    assert "--payload-cache-root .kitaru/cache/payloads" in readme
     assert readme.index(worker_command) < readme.index("kitaru session import")
     assert "all 30 sessions" in readme
     assert "--size 30" in readme

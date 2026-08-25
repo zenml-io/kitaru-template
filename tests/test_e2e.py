@@ -52,6 +52,12 @@ def _get_readme_command(name: str) -> list[str]:
     return arguments[3:]
 
 
+def _replace_option(arguments: list[str], option: str, value: str) -> None:
+    """Replace one option value in a parsed README command."""
+    index = arguments.index(option)
+    arguments[index + 1] = value
+
+
 def _run(
     command: list[str],
     *,
@@ -141,6 +147,10 @@ def test_canonical_example_completes_import_to_cohorts(tmp_path: Path) -> None:
 
     worker_arguments = _get_readme_command("worker")
     worker_name = worker_arguments[worker_arguments.index("--name") + 1]
+    _replace_option(worker_arguments, "--blob-cache-root", str(tmp_path / "blobs"))
+    _replace_option(
+        worker_arguments, "--payload-cache-root", str(tmp_path / "payloads")
+    )
     worker_log_path = Path(
         os.environ.get("KITARU_CANONICAL_WORKER_LOG", tmp_path / "worker.log")
     )
@@ -153,10 +163,6 @@ def test_canonical_example_completes_import_to_cohorts(tmp_path: Path) -> None:
                 *worker_arguments,
                 "--poll-interval",
                 "0.1",
-                "--blob-cache-root",
-                str(tmp_path / "blobs"),
-                "--payload-cache-root",
-                str(tmp_path / "payloads"),
                 "--timeout",
                 "300",
             ],

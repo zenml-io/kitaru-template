@@ -29,7 +29,15 @@ Check the currently selected Kitaru server:
 uv run kitaru status
 ```
 
-If the selected server is healthy, keep using it. It can be local or cloud. Check whether this template is already set up there:
+The expanded tour runs against a Kitaru Cloud server. If its URL is not already selected, set it explicitly:
+
+```bash
+export KITARU_API_URL="https://your-kitaru-server.example"
+```
+
+Use an inherited `KITARU_API_KEY` when one is already configured. Otherwise authenticate interactively with `uv run kitaru login "$KITARU_API_URL"`. The tour checks connectivity without printing credentials and does not switch to a local server.
+
+If the selected server is healthy, keep using it. The template itself supports local or cloud servers; the expanded tour continues only with the cloud target above. Check whether this template is already set up there:
 
 ```bash
 uv run kitaru agent get returns-resolver
@@ -69,12 +77,14 @@ uv run kitaru agent register \
   --tool escalate_to_human
 ```
 
-Open a second terminal in this directory and start a worker. No model-provider credentials are needed to import the checked-in traces:
+Open a second terminal in this directory and start a worker. A new terminal does not inherit exports from the first one, so repeat the `KITARU_API_URL` export there and make the same `KITARU_API_KEY` available when you selected Cloud through environment variables. Run `uv run kitaru status` in the second terminal and confirm that it reports the same Cloud URL before starting the worker. No model-provider credentials are needed to import the checked-in traces:
 
 <!-- e2e:worker -->
 
 ```bash
-uv run kitaru worker start --name kitaru-template-worker --concurrency 10
+uv run kitaru worker start --name kitaru-template-worker --concurrency 10 \
+  --blob-cache-root .kitaru/cache/blobs \
+  --payload-cache-root .kitaru/cache/payloads
 ```
 
 Leave the worker running while you import and investigate. Return to the first terminal for the remaining commands.
