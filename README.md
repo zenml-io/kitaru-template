@@ -2,7 +2,7 @@
 
 The maintained Python returns agent example now lives in the main Kitaru repository:
 
-[`examples/python/pydantic_ai_ticket_resolver`](https://github.com/zenml-io/kitaru/tree/develop/examples/python/pydantic_ai_ticket_resolver)
+[`examples/python/pydantic_ai_ticket_resolver`](https://github.com/zenml-io/kitaru/tree/main/examples/python/pydantic_ai_ticket_resolver)
 
 Clone Kitaru and enter that directory before following its README:
 
